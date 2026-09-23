@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#182e31">
+  <meta name="description" content="Teach a real, tiny neural network to recognize synthetic nuclear irregularity. An interactive learning lab for pathology residents.">
+  <title>Nucleus Lab · AI for the pathologist</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script defer src="src/core.js"></script>
+  <script defer src="data/nuclei.js"></script>
+  <script defer src="src/app.js"></script>
+</head>
+<body>
+  <a class="skip" href="#main">Skip to the experiment</a>
+  <header class="site-header">
+    <a class="wordmark" href="#" aria-label="Nucleus Lab home"><img src="icon.svg" alt="" width="36" height="36"><span>NUCLEUS<span class="wordmark-light">LAB</span></span></a>
+    <div class="header-caption">AI FOR THE PATHOLOGIST <span>/</span> LAB 01</div>
+    <div class="header-actions"><button class="button quiet" id="lecture-toggle" aria-pressed="false">Lecture view</button><button class="button quiet" id="guide-open">Teaching guide <span aria-hidden="true">↗</span></button></div>
+  </header>
+
+  <main id="main">
+    <section class="hero">
+      <div><div class="eyebrow"><span class="live-dot"></span> A SMALL NETWORK. AN OPEN BLACK BOX.</div>
+        <h1>How does a neuron<br>learn to <em>see?</em></h1>
+        <p>Teach a tiny network to recognize irregular nuclear contours.<br class="desktop-break"> Watch it learn. Then show it something new.</p>
+      </div>
+      <div class="hero-specimens" aria-label="Regular and irregular synthetic nuclei">
+        <figure><img src="nuclei/N001.svg" alt="Smooth, regular synthetic nucleus"><figcaption><span class="dot regular"></span>Regular</figcaption></figure>
+        <span class="hero-vs">→<br><small>learn the<br>difference</small></span>
+        <figure><img src="nuclei/N002.svg" alt="Lobulated, irregular synthetic nucleus"><figcaption><span class="dot irregular"></span>Irregular</figcaption></figure>
+      </div>
+    </section>
+    <nav class="step-nav" aria-label="Experiment stages">
+      <button class="step-tab" data-stage="data"><span class="step-number">01</span><span>Meet the nuclei<small>100 synthetic images</small></span><span class="tab-arrow">↗</span></button>
+      <button class="step-tab active" data-stage="train" aria-current="step"><span class="step-number">02</span><span>Train a network<small>80 training examples</small></span><span class="tab-arrow">↗</span></button>
+      <button class="step-tab" data-stage="test"><span class="step-number">03</span><span>Test what it learned<small>20 held-out examples</small></span><span class="tab-arrow">↗</span></button>
+    </nav>
+
+    <section id="data-view" hidden>
+      <div class="section-heading"><div><div class="eyebrow">THE IMAGE BANK</div><h2>A hundred nuclei. One narrow question.</h2></div><button class="button primary" id="data-next">Build the network →</button></div>
+      <p class="section-intro">Is the <strong>contour</strong> regular or irregular? These are deliberately simple, computer-generated shapes, not patient images. Their labels come from the shape generator. Irregular does not mean malignant.</p>
+      <div class="data-notes"><article><b>80 to learn from</b><p>40 regular + 40 irregular. Each shape becomes a 16 × 16 image. Click a training nucleus to inspect it.</p></article><article><b>20 to try afterward</b><p>10 regular + 10 irregular, reserved before training. Related shape pairs stay in the same split.</p></article><article><b>A fair starting point</b><p>Size, elongation, position and stain vary. Nuisance variables are matched across labels within each pair.</p></article></div>
+      <div class="gallery-heading"><h3>The training bank <span class="muted">/ 80 images</span></h3><div class="legend"><span><i class="dot regular"></i>Regular</span><span><i class="dot irregular"></i>Irregular</span></div></div>
+      <div id="data-gallery" class="sample-gallery bank"></div>
+      <div class="reserved"><div class="reserved-icon">20</div><div><b>The test bank is reserved.</b><p>Open stage 03 to evaluate the model. Test images and labels never enter a gradient update or the input scaler.</p></div></div>
+    </section>
+
+    <section id="experiment-view">
+      <section id="test-overview" hidden>
+        <div class="section-heading"><div><div class="eyebrow">THE MOMENT OF TRUTH</div><h2>Learning, or remembering?</h2></div><button class="button primary" id="run-test">Run on 20 test nuclei →</button></div>
+        <p class="section-intro">Training pauses for this evaluation. The weights stay fixed: each test nucleus gets a prediction, with no answer fed back into the model.</p>
+        <div id="test-empty" class="test-empty"><span class="empty-orbit">?</span><div><h3>Twenty new nuclei are waiting.</h3><p id="test-ready-text">You can test even an untrained model to establish a baseline.</p></div></div>
+        <div id="test-results" hidden>
+          <div class="result-layout"><div class="result-metrics"><div><span>TEST ACCURACY</span><strong id="test-accuracy">—</strong><small id="test-count">—</small></div><div><span>IRREGULAR SENSITIVITY</span><strong id="test-sensitivity">—</strong><small>Irregular nuclei called irregular</small></div><div><span>REGULAR SPECIFICITY</span><strong id="test-specificity">—</strong><small>Regular nuclei called regular</small></div></div><div id="confusion" class="confusion"></div></div>
+          <p class="evaluation-note" id="evaluation-note"></p>
+          <p class="small muted">Every nucleus changes overall test accuracy by 5 percentage points. Reusing this set to choose settings turns it into development data; a final evaluation would need another untouched set.</p>
+        </div>
+      </section>
+
+      <div class="lab-layout" id="lab-layout">
+        <aside class="controls" id="controls">
+          <div class="eyebrow">YOUR EXPERIMENT</div><h2>Set it up.</h2>
+          <div class="preset-buttons" aria-label="Experiment presets"><button class="preset active" data-preset="simple">One neuron</button><button class="preset" data-preset="pixels">Learn from pixels</button><button class="preset" data-preset="small">Less data</button></div>
+          <label class="field-label" for="input-mode">What goes in <span class="hint" title="Measurements make this an easier problem; pixels ask the network to learn spatial patterns.">?</span></label>
+          <select id="input-mode"><option value="shape">4 shape measurements</option><option value="pixels">256 raw pixels</option></select>
+          <p class="control-help" id="input-help">We measure the shape first. The neuron learns how to combine those measurements.</p>
+          <label class="field-label" for="hidden-units">Hidden layer</label>
+          <select id="hidden-units"><option value="0">None · a single neuron</option><option value="4">4 neurons · tanh</option><option value="8">8 neurons · tanh</option><option value="12">12 neurons · tanh</option></select>
+          <p class="control-help">The output is always one sigmoid neuron. Inputs do not count as a learned layer.</p>
+          <div class="range-label"><label for="learning-rate">Learning rate</label><output id="rate-value" for="learning-rate">0.08</output></div>
+          <input type="range" id="learning-rate" min="0" max="7" value="3" step="1">
+          <div class="range-ends"><span>Smaller steps</span><span>Bigger steps</span></div>
+          <div class="control-pair"><div><label class="field-label" for="batch-size">Batch size</label><select id="batch-size"><option>1</option><option selected>8</option><option>16</option><option>80</option></select></div><div><label class="field-label" for="l2">L2 penalty</label><select id="l2"><option value="0">None</option><option value="0.001" selected>0.001</option><option value="0.01">0.01</option><option value="0.1">0.1</option></select></div></div>
+          <div class="range-label"><label for="train-count">Training nuclei</label><output id="count-value" for="train-count">80 / 80</output></div>
+          <input type="range" id="train-count" min="10" max="80" value="80" step="10">
+          <div class="control-pair"><div><label class="field-label" for="seed">Weight seed</label><input id="seed" type="number" min="1" max="99999" value="7"></div><div><label class="field-label" for="speed">Animation pace</label><select id="speed"><option value="slow">Slow</option><option value="normal" selected>Normal</option><option value="fast">Fast</option></select></div></div>
+          <p class="control-help reset-help">Changing inputs, architecture, seed or training count starts a fresh model.</p>
+          <button class="button primary full" id="play"><span aria-hidden="true">▶</span> Start training</button>
+          <div class="control-pair actions"><button class="button" id="step">1 update</button><button class="button" id="epoch-step">1 epoch</button></div>
+          <button class="button quiet full" id="reset">↺ Reset weights</button>
+          <p class="control-help">One update = one batch. One epoch = one pass through the selected training set. Auto-pause at 200 epochs.</p>
+        </aside>
+
+        <div class="workspace" id="workspace">
+          <div class="workspace-top"><div><div class="eyebrow">LIVE MODEL</div><h2 id="workspace-title">Watch the connections change.</h2></div><div class="status-pill" id="status"><span class="live-dot"></span>Ready to learn</div></div>
+          <div class="metrics-strip"><div><span>EPOCH</span><strong id="epoch-value">0</strong></div><div><span>UPDATES</span><strong id="updates-value">0</strong></div><div><span>TRAIN ACCURACY</span><strong id="accuracy-value">—</strong></div><div><span>TRAIN LOSS <small>↓</small></span><strong id="loss-value">—</strong></div><div><span>PARAMETERS</span><strong id="params-value">5</strong></div></div>
+          <div class="network-card">
+            <div class="network-card-top"><h3>A prediction, from the inside</h3><label class="checkbox" id="follow-wrap"><input type="checkbox" id="follow" checked> Follow each batch</label></div>
+            <div class="machine">
+              <div class="specimen"><div class="eyebrow">SELECTED NUCLEUS</div><canvas id="specimen-canvas" width="256" height="256" aria-label="Selected synthetic nucleus"></canvas><div class="specimen-label"><b id="sample-id">N001</b><span id="truth-label" class="class-label">Regular</span></div><div class="segmented" aria-label="Image view"><button data-image-view="contour" class="active" aria-pressed="true">Shape</button><button data-image-view="pixels" aria-pressed="false">Pixels</button><button data-image-view="influence" aria-pressed="false">Influence</button></div><p class="small muted" id="image-caption">Smooth source drawing. The model receives its 16 × 16 raster.</p></div>
+              <div class="network-diagram" tabindex="0" role="region" aria-label="Network diagram; scroll horizontally on small screens"><svg id="network-svg" viewBox="0 0 620 350" role="img" aria-label="Live neural network with actual activations and weights"></svg><div class="network-legend"><span><i class="line positive"></i>Positive weight</span><span><i class="line negative"></i>Negative weight</span><span>Width = magnitude</span></div><p class="network-mobile-hint">← Swipe the network to inspect every node →</p></div>
+            </div>
+            <div class="prediction-row"><div><span class="eyebrow">MODEL OUTPUT · P(IRREGULAR)</span><div class="prediction-number"><strong id="prediction-value">—</strong><span id="prediction-call">—</span></div></div><div class="probability"><div class="probability-track"><div id="probability-fill"></div><i id="threshold-marker"></i></div><div class="probability-labels"><span>Regular · 0</span><span>1 · Irregular</span></div></div><label class="threshold-control" for="threshold">Decision threshold <output id="threshold-value">0.50</output><input type="range" id="threshold" min="0.05" max="0.95" step="0.05" value="0.5"></label></div>
+            <p class="threshold-note">The threshold changes the call, not the learned weights. The sigmoid output is a model score, not a calibrated clinical probability.</p>
+          </div>
+
+          <div class="detail-grid">
+            <article class="panel weight-panel"><div class="panel-heading"><div><div class="eyebrow">LOOK INSIDE A NEURON</div><h3 id="weight-title">The output neuron's weights</h3></div><select id="inspect-neuron" aria-label="Neuron to inspect"><option value="0">Output</option></select></div><p class="small muted" id="weight-description"></p><div id="shape-weights"></div><div id="pixel-weights" hidden><canvas id="weight-canvas" width="256" height="256" aria-label="Input weight map; use the pixel selector to inspect a weight"></canvas><div class="weight-map-side"><div class="scale-ramp"></div><div class="scale-labels"><span>−</span><span>0</span><span>+</span></div><label class="field-label" for="pixel-index">Inspect pixel (1–256)</label><input type="number" id="pixel-index" min="1" max="256" value="120"><p id="pixel-detail" class="small mono"></p><p class="small muted">Each square is one actual learned input weight. Click the map to inspect it.</p></div></div><div class="bias-line" id="bias-line"></div><details class="math-details"><summary>Show the calculation</summary><div id="calculation" class="mono"></div><p class="small muted">Inputs are centered and scaled using only the selected training nuclei. A positive weight raises this neuron's score as its input increases; a hidden neuron can still have a negative output weight.</p></details></article>
+            <article class="panel" id="learning-panel"><div class="panel-heading"><div><div class="eyebrow">THE LEARNING CURVE</div><h3>Is the error getting smaller?</h3></div><span class="chart-key"><i></i>Train loss</span></div><svg id="loss-chart" viewBox="0 0 490 190" role="img" aria-label="Training binary cross-entropy by completed epoch"></svg><div class="trace" id="update-trace"><b>Try “1 update”.</b><p>See one weight change using the real gradient of a batch.</p></div><p class="small muted">Loss is mean binary cross-entropy, before the L2 penalty. Training accuracy is measured on the same nuclei used to fit the model.</p></article>
+            <article class="panel" id="test-influence-panel" hidden><div class="eyebrow">READ THE IMAGE FEEDBACK</div><h3>What changes its mind?</h3><p>Choose <b>Influence</b> beneath the image. We erase each 2 × 2 patch in turn, then run a fresh forward pass.</p><p><span class="ink-positive">Teal:</span> removing this patch lowers P(irregular). <span class="ink-negative">Coral:</span> removing it raises P(irregular).</p><p id="influence-detail" class="mono small"></p><p class="small muted">This is a perturbation experiment, not an attention map or proof of a biological explanation. Erasing a patch may create an artificial hole.</p></article>
+          </div>
+          <div class="influence-note" id="influence-note" hidden><b>How to read influence</b><span>Teal: erasing the patch lowers P(irregular). Coral: erasing it raises P(irregular). Hover, tap or choose a patch below. This perturbation can create artificial holes; it is not an attention map.</span><label class="patch-label" for="patch-index">Inspect patch (1–64) <input type="number" id="patch-index" min="1" max="64" value="28"></label><output id="occlusion-readout">Each patch is 2 × 2 input pixels.</output></div>
+          <details class="stress-panel" id="stress-panel"><summary><span>Try a small change to this nucleus</span><small>Position &amp; stain →</small></summary><p class="small muted">A temporary perturbation of the selected image. This does not change the dataset, train the model or enter the reported accuracy.</p><div class="stress-controls"><div><div class="range-label"><label for="shift">Horizontal shift</label><output id="shift-value">0 px</output></div><input type="range" id="shift" min="-3" max="3" value="0" step="1"></div><div><div class="range-label"><label for="stain">Stain intensity</label><output id="stain-value">1.00×</output></div><input type="range" id="stain" min="0.4" max="1.4" value="1" step="0.05"></div><button class="button" id="restore-image">Restore image</button></div><p class="small" id="stress-result"></p></details>
+
+          <section class="training-gallery"><div class="gallery-heading"><h3 id="gallery-title">The training bench <span class="muted">/ click a nucleus</span></h3><select id="gallery-filter" aria-label="Filter nuclei"><option value="all">All nuclei</option><option value="wrong">Mistakes only</option><option value="regular">Regular labels</option><option value="irregular">Irregular labels</option></select></div><p class="small muted" id="gallery-note">Border and symbol show correctness. The percentage is P(irregular), not confidence in the displayed label.</p><div id="sample-gallery" class="sample-gallery"></div><p class="small muted" id="gallery-empty" hidden>No nuclei match this filter.</p></section>
+          <div class="next-stage" id="next-stage"><div><b>Looking good on the training set?</b><p>Now ask whether it learned something that transfers.</p></div><button class="button primary" id="go-test">Try the test set →</button></div>
+        </div>
+      </div>
+    </section>
+    <div class="toast" role="status" aria-live="polite" id="toast"></div>
+  </main>
+  <footer><span>NUCLEUS LAB <i>·</i> AI for the pathologist</span><span>Synthetic shapes. Real learning. Educational use only.</span><button class="text-button" id="export">Export experiment JSON ↗</button></footer>
+
+  <dialog id="guide"><div class="dialog-top"><span class="eyebrow">A LECTURE IN MINIATURE</span><button class="button quiet" id="guide-close" aria-label="Close teaching guide">✕</button></div><h2>Open the black box.</h2><p>A suggested 10–15 minute live demonstration for pathology residents.</p>
+    <ol class="guide-steps"><li><b>Start with a question, not a model.</b><p>“Is this contour irregular?” is much narrower than “Is this cancer?” Look at the dataset; discuss what is missing from a real slide.</p></li><li><b>Build the smallest useful neuron.</b><p>Use the One neuron preset. Four measurements enter, each multiplied by a weight. Add a bias; a sigmoid turns the score into a number between 0 and 1.</p></li><li><b>Let it be wrong. Then show one update.</b><p>Compare its output with the known label: regular = 0, irregular = 1. Cross-entropy penalizes errors, particularly confident errors. Backpropagation gives a gradient; gradient descent changes the weights.</p></li><li><b>Watch it learn, then remove our help.</b><p>Start training. Inspect the weights and curve. Switch to Learn from pixels: now the 256 image intensities go in. Eight hidden tanh neurons can combine patterns nonlinearly. This resets training.</p></li><li><b>Test what it learned.</b><p>Run the 20 held-out examples. Inspect mistakes and the confusion matrix. Move the decision threshold: sensitivity and specificity change even though the weights do not.</p></li><li><b>Ask what could go wrong.</b><p>Try Less data, a different seed or a very large learning rate. Inspect Influence; shift a nucleus. A successful toy model may still rely on shortcuts. Real performance needs representative, independent patient-level data.</p></li></ol>
+    <h3>The essential distinctions</h3><ul><li><b>One neuron:</b> logistic regression, with one learned affine layer plus sigmoid. The input layer is not counted.</li><li><b>Hidden layer:</b> a small fully connected network, not a convolutional network. Hidden units use tanh; the output uses sigmoid.</li><li><b>Shape mode:</b> humans designed four measurements. The model only learns their combination. A single neuron can work well because those measurements already encode useful information.</li><li><b>Pixel mode:</b> the model receives 256 intensities. No label, sample ID, generator parameters or contour coordinates enter the network.</li><li><b>Influence:</b> a measured response to patch removal. It is neither an attention mechanism nor a guarantee that the model reasons like a pathologist.</li><li><b>20 test cases:</b> a teaching exercise, not a clinical validation. Repeatedly consulting them to tune the model means they are no longer an untouched final test.</li></ul>
+    <h3>Further reading</h3><p><a href="https://cs231n.github.io/neural-networks-case-study/" target="_blank" rel="noopener">Stanford CS231n: from a linear classifier to a neural network ↗</a></p><p><a href="https://cs231n.github.io/linear-classify/" target="_blank" rel="noopener">Stanford CS231n: understanding linear weights as image templates ↗</a></p><p><a href="https://arxiv.org/abs/1311.2901" target="_blank" rel="noopener">Zeiler &amp; Fergus: Visualizing and Understanding Convolutional Networks (occlusion experiments) ↗</a></p>
+    <p class="small muted">This lab uses its own simple, fully connected model and synthetic data; it does not reproduce a clinical study or the CNN in that paper. All training runs locally in your browser. No patient data, backend or API key is needed.</p>
+  </dialog>
+  <noscript>This interactive lab requires JavaScript. All computations happen locally in your browser.</noscript>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "nucleus-lab",
+  "version": "1.0.0",
+  "private": true,
+  "description": "An interactive neural network teaching lab for pathology residents. No runtime dependencies.",
+  "scripts": {
+    "generate": "node scripts/generate-data.cjs",
+    "test": "node --test tests/core.test.cjs",
+    "start": "node scripts/serve.cjs"
+  }
+}
